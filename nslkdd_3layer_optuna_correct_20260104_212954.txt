@@ -1,0 +1,834 @@
+============================================================
+XGBoost + 3層構造 NSL-KDD 結果（修正版）
+実行日時: 2026-01-04 21:29:54
+最適化手法: Optuna (TPE, 50 trials)
+評価方法: Train内5分割CVで最適化 → Testで最終評価
+============================================================
+
+=== データ概要 ===
+Train: 125,973件
+  正常: 67,343, 攻撃: 58,630
+  攻撃率: 46.5%
+Test: 22,544件（未知の攻撃を含む）
+  正常: 9,711, 攻撃: 12,833
+  攻撃率: 56.9%
+scale_pos_weight: 1.15
+
+=== Optuna最適化結果（Train内CV）===
+最適な分位点: q_b=16%, q_c=3%
+CV最良F1スコア: 0.9991 (std: 0.0002)
+
+各foldの詳細:
+Fold   Precision  Recall     F1         AUC        TP       FP       FN       TN
+--------------------------------------------------------------------------------------
+Fold 1 0.9994     0.9994     0.9994     1.0000     11719    7        7        13462   
+Fold 2 0.9996     0.9986     0.9991     1.0000     11709    5        17       13464   
+Fold 3 0.9993     0.9981     0.9987     1.0000     11704    8        22       13461   
+Fold 4 0.9996     0.9986     0.9991     1.0000     11709    5        17       13463   
+Fold 5 0.9993     0.9991     0.9992     1.0000     11715    8        11       13460   
+--------------------------------------------------------------------------------------
+平均   0.9994     0.9987     0.9991     1.0000     58556    33       74       67310   
+
+上位5件:
+  q_b=16%, q_c=3% → F1=0.9991
+  q_b=17%, q_c=3% → F1=0.9991
+  q_b=10%, q_c=15% → F1=0.9990
+  q_b=38%, q_c=4% → F1=0.9990
+  q_b=29%, q_c=4% → F1=0.9990
+
+============================================================
+交差検証による評価（XGBoost単体 vs 3層構造）
+============================================================
+
+【XGBoost単体 - 交差検証結果】
+Fold   Precision  Recall     F1         AUC        TP       FP       FN       TN
+--------------------------------------------------------------------------------------
+Fold 1 0.9991     0.9993     0.9992     1.0000     11718    11       8        13458   
+Fold 2 0.9992     0.9989     0.9991     1.0000     11713    9        13       13460   
+Fold 3 0.9992     0.9980     0.9986     1.0000     11703    9        23       13460   
+Fold 4 0.9997     0.9985     0.9991     1.0000     11708    3        18       13465   
+Fold 5 0.9992     0.9991     0.9991     1.0000     11715    9        11       13459   
+--------------------------------------------------------------------------------------
+平均   0.9993     0.9988     0.9990     1.0000     58557    41       73       67302   
+標準偏差 0.0002     0.0005     0.0002     0.0000    
+
+【XGBoost + 3層構造 - 交差検証結果】
+Fold   Precision  Recall     F1         AUC        TP       FP       FN       TN
+--------------------------------------------------------------------------------------
+Fold 1 0.9994     0.9991     0.9993     1.0000     11716    7        10       13462   
+Fold 2 0.9992     0.9987     0.9990     1.0000     11711    9        15       13460   
+Fold 3 0.9993     0.9977     0.9985     1.0000     11699    8        27       13461   
+Fold 4 0.9994     0.9985     0.9989     1.0000     11708    7        18       13461   
+Fold 5 0.9993     0.9991     0.9992     1.0000     11716    8        10       13460   
+--------------------------------------------------------------------------------------
+平均   0.9993     0.9986     0.9990     1.0000     58550    39       80       67304   
+標準偏差 0.0001     0.0005     0.0003     0.0000    
+
+【交差検証での差分（3層構造 - 単体）】
+Fold   Precision    Recall       F1           AUC
+--------------------------------------------------------
+Fold 1 +0.0003       -0.0002       +0.0001       +0.0000
+Fold 2 -0.0000       -0.0002       -0.0001       -0.0000
+Fold 3 +0.0001       -0.0003       -0.0001       +0.0000
+Fold 4 -0.0003       +0.0000       -0.0002       -0.0000
+Fold 5 +0.0001       +0.0001       +0.0001       -0.0000
+--------------------------------------------------------
+平均   +0.0000       -0.0001       -0.0000       -0.0000
+
+============================================================
+最終評価（Test: 未知の攻撃への汎化性能）
+============================================================
+
+【XGBoost 単体】
+混同行列:
+  TP: 8673, FP: 286, FN: 4160, TN: 9425
+評価指標:
+  Precision: 0.9681
+  Recall:    0.6758
+  F1 Score:  0.7960
+  ROC-AUC:   0.9711
+
+【XGBoost + 3層構造】
+混同行列:
+  TP: 8868, FP: 285, FN: 3965, TN: 9426
+評価指標:
+  Precision: 0.9689
+  Recall:    0.6910
+  F1 Score:  0.8067
+  ROC-AUC:   0.9637
+
+============================================================
+性能比較（3層構造 - 単体）
+============================================================
+  Precision: +0.0008
+  Recall:    +0.0152
+  F1 Score:  +0.0107
+  ROC-AUC:   -0.0073
+  TP: +195
+  FP: -1
+  FN: -195
+
+============================================================
+追加特徴量の重要度ランキング
+============================================================
+layer_score:  6位 (重要度: 0.0353)
+layer_label: 43位 (重要度: 0.0000)
+
+=== 特徴量重要度 Top10 ===
+   1位: src_bytes                 (0.3453)
+   2位: protocol_type             (0.1923)
+   3位: hot                       (0.0865)
+   4位: flag                      (0.0654)
+   5位: dst_host_same_src_port_rate (0.0385)
+   6位: layer_score               (0.0353)
+   7位: dst_host_srv_count        (0.0353)
+   8位: wrong_fragment            (0.0227)
+   9位: dst_bytes                 (0.0192)
+  10位: srv_count                 (0.0160)
+
+============================================================
+異常サンプルの層別分布（Test）
+============================================================
+  A層（Core Normal）:   0 (0.0%)
+  B層（Fluctuation）:   4,924 (38.4%)
+  C層（Anomaly-prone）: 7,909 (61.6%)
+
+============================================================
+結論
+============================================================
+3層構造の効果: 有効（F1が+0.0107改善）
+
+考察:
+  - NSL-KDDのTestは未知の攻撃タイプを含む
+  - Train内CVでのF1=0.9991 vs Test F1=0.8067
+  - 異常の61.6%がC層に分布
+
+
+"""
+XGBoost + 3層構造：Optuna分位点最適化（NSL-KDD版・修正版）
+- Train内で交差検証して分位点を最適化
+- 交差検証でXGBoost単体と3層構造の両方を評価
+- Testで最終評価（未知の攻撃への汎化性能）
+"""
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import StratifiedKFold
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import (
+    confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score
+)
+import xgboost as xgb
+import optuna
+from datetime import datetime
+import warnings
+warnings.filterwarnings('ignore')
+
+optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+# ============================================================
+# 設定
+# ============================================================
+BASE_DIR = "/Users/shoutarou/Library/Mobile Documents/com~apple~CloudDocs/授業/3年/後期/プロ研"
+DATA_DIR = f"{BASE_DIR}/nsl-kdd"
+N_SPLITS = 5
+N_TRIALS = 50
+RANDOM_STATE = 42
+
+COLUMN_NAMES = [
+    'duration', 'protocol_type', 'service', 'flag', 'src_bytes', 'dst_bytes',
+    'land', 'wrong_fragment', 'urgent', 'hot', 'num_failed_logins', 'logged_in',
+    'num_compromised', 'root_shell', 'su_attempted', 'num_root', 'num_file_creations',
+    'num_shells', 'num_access_files', 'num_outbound_cmds', 'is_host_login',
+    'is_guest_login', 'count', 'srv_count', 'serror_rate', 'srv_serror_rate',
+    'rerror_rate', 'srv_rerror_rate', 'same_srv_rate', 'diff_srv_rate',
+    'srv_diff_host_rate', 'dst_host_count', 'dst_host_srv_count',
+    'dst_host_same_srv_rate', 'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
+    'dst_host_srv_diff_host_rate', 'dst_host_serror_rate', 'dst_host_srv_serror_rate',
+    'dst_host_rerror_rate', 'dst_host_srv_rerror_rate', 'label', 'difficulty'
+]
+
+CATEGORICAL_COLS = ['protocol_type', 'service', 'flag']
+
+# ============================================================
+# データ読み込み
+# ============================================================
+print("=" * 60)
+print("NSL-KDD + 3層構造：Optuna分位点最適化（修正版）")
+print("=" * 60)
+print(f"実行日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"Optunaトライアル数: {N_TRIALS}")
+print(f"交差検証: Train内で{N_SPLITS}分割")
+print(f"最終評価: Test（未知の攻撃を含む）")
+
+print("\nデータ読み込み中...")
+train_df = pd.read_csv(f"{DATA_DIR}/KDDTrain+.txt", names=COLUMN_NAMES)
+test_df = pd.read_csv(f"{DATA_DIR}/KDDTest+.txt", names=COLUMN_NAMES)
+
+# ラベル二値化
+train_df['is_attack'] = (train_df['label'] != 'normal').astype(int)
+test_df['is_attack'] = (test_df['label'] != 'normal').astype(int)
+
+print(f"\n=== データ概要 ===")
+print(f"Train: {len(train_df):,}件")
+print(f"  正常: {(train_df['is_attack']==0).sum():,}, 攻撃: {(train_df['is_attack']==1).sum():,}")
+print(f"  攻撃率: {train_df['is_attack'].mean()*100:.1f}%")
+print(f"Test: {len(test_df):,}件")
+print(f"  正常: {(test_df['is_attack']==0).sum():,}, 攻撃: {(test_df['is_attack']==1).sum():,}")
+print(f"  攻撃率: {test_df['is_attack'].mean()*100:.1f}%")
+
+# カテゴリ変数エンコード（Trainのみでfit、未知カテゴリは-1）
+label_encoders = {}
+for col in CATEGORICAL_COLS:
+    le = LabelEncoder()
+    le.fit(train_df[col])  # Trainのみでfit
+
+    # Trainを変換
+    train_df[col] = le.transform(train_df[col])
+
+    # Testを変換（未知カテゴリは-1）
+    test_values = test_df[col].copy()
+    known_mask = test_values.isin(le.classes_)
+    test_df[col] = -1  # デフォルトは-1（未知）
+    test_df.loc[known_mask, col] = le.transform(test_values[known_mask])
+
+    label_encoders[col] = le
+
+# 未知カテゴリの数を表示
+for col in CATEGORICAL_COLS:
+    unknown_count = (test_df[col] == -1).sum()
+    if unknown_count > 0:
+        print(f"  {col}: 未知カテゴリ {unknown_count}件")
+
+feature_cols = [c for c in COLUMN_NAMES if c not in ['label', 'difficulty']]
+
+X_train = train_df[feature_cols].values
+y_train = train_df['is_attack'].values
+X_test = test_df[feature_cols].values
+y_test = test_df['is_attack'].values
+
+print(f"特徴量数: {len(feature_cols)}")
+
+scale_pos_weight = sum(y_train == 0) / max(sum(y_train == 1), 1)
+print(f"scale_pos_weight: {scale_pos_weight:.2f}")
+
+# ============================================================
+# 層割り当て関数
+# ============================================================
+def assign_layer(scores, threshold_b, threshold_c):
+    layers = np.ones(len(scores), dtype=int)  # B層
+    layers[scores >= threshold_b] = 0  # A層
+    layers[scores <= threshold_c] = 2  # C層
+    return layers
+
+# ============================================================
+# Optuna目的関数（Train内で交差検証）
+# ============================================================
+def objective(trial):
+    q_b = trial.suggest_int('q_b', 10, 50)
+    q_c = trial.suggest_int('q_c', 1, 15)
+
+    skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=RANDOM_STATE)
+    f1_scores = []
+    prec_scores = []
+    rec_scores = []
+    auc_scores = []
+
+    for fold_idx, (train_idx, val_idx) in enumerate(skf.split(X_train, y_train)):
+        X_tr, X_val = X_train[train_idx], X_train[val_idx]
+        y_tr, y_val = y_train[train_idx], y_train[val_idx]
+
+        # Isolation Forest
+        X_tr_normal = X_tr[y_tr == 0]
+        if len(X_tr_normal) > 30000:
+            sample_idx = np.random.choice(len(X_tr_normal), 30000, replace=False)
+            X_tr_normal_sample = X_tr_normal[sample_idx]
+        else:
+            X_tr_normal_sample = X_tr_normal
+
+        iso_forest = IsolationForest(contamination=0.1, random_state=RANDOM_STATE, n_jobs=-1)
+        iso_forest.fit(X_tr_normal_sample)
+
+        tr_scores = iso_forest.score_samples(X_tr)
+        val_scores = iso_forest.score_samples(X_val)
+        normal_scores = iso_forest.score_samples(X_tr_normal_sample)
+
+        threshold_b = np.percentile(normal_scores, 100 - q_b)
+        threshold_c = np.percentile(normal_scores, q_c)
+
+        tr_layers = assign_layer(tr_scores, threshold_b, threshold_c)
+        val_layers = assign_layer(val_scores, threshold_b, threshold_c)
+
+        X_tr_3layer = np.column_stack([X_tr, tr_scores, tr_layers])
+        X_val_3layer = np.column_stack([X_val, val_scores, val_layers])
+
+        model = xgb.XGBClassifier(
+            scale_pos_weight=scale_pos_weight,
+            random_state=RANDOM_STATE,
+            eval_metric='logloss',
+            n_jobs=-1,
+            verbosity=0,
+            max_depth=6,
+            n_estimators=100
+        )
+        model.fit(X_tr_3layer, y_tr)
+        y_pred = model.predict(X_val_3layer)
+        y_pred_proba = model.predict_proba(X_val_3layer)[:, 1]
+
+        # 各指標を計算
+        fold_f1 = f1_score(y_val, y_pred)
+        fold_prec = precision_score(y_val, y_pred)
+        fold_rec = recall_score(y_val, y_pred)
+        fold_auc = roc_auc_score(y_val, y_pred_proba)
+        tn, fp, fn, tp = confusion_matrix(y_val, y_pred).ravel()
+
+        f1_scores.append(fold_f1)
+        prec_scores.append(fold_prec)
+        rec_scores.append(fold_rec)
+        auc_scores.append(fold_auc)
+
+        # 各foldの指標を保存
+        trial.set_user_attr(f'fold{fold_idx+1}_f1', fold_f1)
+        trial.set_user_attr(f'fold{fold_idx+1}_precision', fold_prec)
+        trial.set_user_attr(f'fold{fold_idx+1}_recall', fold_rec)
+        trial.set_user_attr(f'fold{fold_idx+1}_auc', fold_auc)
+        trial.set_user_attr(f'fold{fold_idx+1}_tp', int(tp))
+        trial.set_user_attr(f'fold{fold_idx+1}_fp', int(fp))
+        trial.set_user_attr(f'fold{fold_idx+1}_fn', int(fn))
+        trial.set_user_attr(f'fold{fold_idx+1}_tn', int(tn))
+
+    trial.set_user_attr('f1_std', np.std(f1_scores))
+    trial.set_user_attr('precision_mean', np.mean(prec_scores))
+    trial.set_user_attr('recall_mean', np.mean(rec_scores))
+    trial.set_user_attr('auc_mean', np.mean(auc_scores))
+    return np.mean(f1_scores)
+
+# ============================================================
+# 交差検証評価関数（XGBoost単体と3層構造の両方を評価）
+# ============================================================
+def evaluate_with_cv(q_b, q_c):
+    """最適な分位点を使って交差検証で評価"""
+    skf = StratifiedKFold(n_splits=N_SPLITS, shuffle=True, random_state=RANDOM_STATE)
+
+    # XGBoost単体の結果格納
+    base_results = {
+        'f1': [], 'precision': [], 'recall': [], 'auc': [],
+        'tp': [], 'fp': [], 'fn': [], 'tn': []
+    }
+
+    # 3層構造の結果格納
+    layer3_results = {
+        'f1': [], 'precision': [], 'recall': [], 'auc': [],
+        'tp': [], 'fp': [], 'fn': [], 'tn': []
+    }
+
+    for fold_idx, (train_idx, val_idx) in enumerate(skf.split(X_train, y_train)):
+        X_tr, X_val = X_train[train_idx], X_train[val_idx]
+        y_tr, y_val = y_train[train_idx], y_train[val_idx]
+
+        # ========== XGBoost単体 ==========
+        model_base = xgb.XGBClassifier(
+            scale_pos_weight=scale_pos_weight,
+            random_state=RANDOM_STATE,
+            eval_metric='logloss',
+            n_jobs=-1,
+            verbosity=0,
+            max_depth=6,
+            n_estimators=100
+        )
+        model_base.fit(X_tr, y_tr)
+        y_pred_base = model_base.predict(X_val)
+        y_pred_proba_base = model_base.predict_proba(X_val)[:, 1]
+
+        tn, fp, fn, tp = confusion_matrix(y_val, y_pred_base).ravel()
+        base_results['f1'].append(f1_score(y_val, y_pred_base))
+        base_results['precision'].append(precision_score(y_val, y_pred_base))
+        base_results['recall'].append(recall_score(y_val, y_pred_base))
+        base_results['auc'].append(roc_auc_score(y_val, y_pred_proba_base))
+        base_results['tp'].append(int(tp))
+        base_results['fp'].append(int(fp))
+        base_results['fn'].append(int(fn))
+        base_results['tn'].append(int(tn))
+
+        # ========== 3層構造 ==========
+        X_tr_normal = X_tr[y_tr == 0]
+        if len(X_tr_normal) > 30000:
+            sample_idx = np.random.choice(len(X_tr_normal), 30000, replace=False)
+            X_tr_normal_sample = X_tr_normal[sample_idx]
+        else:
+            X_tr_normal_sample = X_tr_normal
+
+        iso_forest = IsolationForest(contamination=0.1, random_state=RANDOM_STATE, n_jobs=-1)
+        iso_forest.fit(X_tr_normal_sample)
+
+        tr_scores = iso_forest.score_samples(X_tr)
+        val_scores = iso_forest.score_samples(X_val)
+        normal_scores = iso_forest.score_samples(X_tr_normal_sample)
+
+        threshold_b = np.percentile(normal_scores, 100 - q_b)
+        threshold_c = np.percentile(normal_scores, q_c)
+
+        tr_layers = assign_layer(tr_scores, threshold_b, threshold_c)
+        val_layers = assign_layer(val_scores, threshold_b, threshold_c)
+
+        X_tr_3layer = np.column_stack([X_tr, tr_scores, tr_layers])
+        X_val_3layer = np.column_stack([X_val, val_scores, val_layers])
+
+        model_3layer = xgb.XGBClassifier(
+            scale_pos_weight=scale_pos_weight,
+            random_state=RANDOM_STATE,
+            eval_metric='logloss',
+            n_jobs=-1,
+            verbosity=0,
+            max_depth=6,
+            n_estimators=100
+        )
+        model_3layer.fit(X_tr_3layer, y_tr)
+        y_pred_3layer = model_3layer.predict(X_val_3layer)
+        y_pred_proba_3layer = model_3layer.predict_proba(X_val_3layer)[:, 1]
+
+        tn, fp, fn, tp = confusion_matrix(y_val, y_pred_3layer).ravel()
+        layer3_results['f1'].append(f1_score(y_val, y_pred_3layer))
+        layer3_results['precision'].append(precision_score(y_val, y_pred_3layer))
+        layer3_results['recall'].append(recall_score(y_val, y_pred_3layer))
+        layer3_results['auc'].append(roc_auc_score(y_val, y_pred_proba_3layer))
+        layer3_results['tp'].append(int(tp))
+        layer3_results['fp'].append(int(fp))
+        layer3_results['fn'].append(int(fn))
+        layer3_results['tn'].append(int(tn))
+
+    return base_results, layer3_results
+
+# ============================================================
+# Optuna最適化
+# ============================================================
+print("\n" + "=" * 60)
+print("Optuna最適化開始（Train内で交差検証）...")
+print("=" * 60)
+
+study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler(seed=RANDOM_STATE))
+study.optimize(objective, n_trials=N_TRIALS, show_progress_bar=True)
+
+best_q_b = study.best_params['q_b']
+best_q_c = study.best_params['q_c']
+best_cv_f1 = study.best_value
+best_trial = study.best_trial
+
+# 各foldのスコアを取得
+best_fold_f1 = [best_trial.user_attrs[f'fold{i+1}_f1'] for i in range(N_SPLITS)]
+best_fold_prec = [best_trial.user_attrs[f'fold{i+1}_precision'] for i in range(N_SPLITS)]
+best_fold_rec = [best_trial.user_attrs[f'fold{i+1}_recall'] for i in range(N_SPLITS)]
+best_fold_auc = [best_trial.user_attrs[f'fold{i+1}_auc'] for i in range(N_SPLITS)]
+best_fold_tp = [best_trial.user_attrs[f'fold{i+1}_tp'] for i in range(N_SPLITS)]
+best_fold_fp = [best_trial.user_attrs[f'fold{i+1}_fp'] for i in range(N_SPLITS)]
+best_fold_fn = [best_trial.user_attrs[f'fold{i+1}_fn'] for i in range(N_SPLITS)]
+best_fold_tn = [best_trial.user_attrs[f'fold{i+1}_tn'] for i in range(N_SPLITS)]
+best_f1_std = best_trial.user_attrs['f1_std']
+
+print(f"\n最適な分位点: q_b={best_q_b}%, q_c={best_q_c}%")
+print(f"CV最良F1スコア: {best_cv_f1:.4f} (std: {best_f1_std:.4f})")
+print(f"\n各foldの詳細:")
+print(f"{'Fold':<6} {'Precision':<10} {'Recall':<10} {'F1':<10} {'AUC':<10} {'TP':<8} {'FP':<8} {'FN':<8} {'TN':<8}")
+print("-" * 86)
+for i in range(N_SPLITS):
+    print(f"Fold {i+1} {best_fold_prec[i]:<10.4f} {best_fold_rec[i]:<10.4f} {best_fold_f1[i]:<10.4f} {best_fold_auc[i]:<10.4f} {best_fold_tp[i]:<8} {best_fold_fp[i]:<8} {best_fold_fn[i]:<8} {best_fold_tn[i]:<8}")
+print("-" * 86)
+print(f"平均   {np.mean(best_fold_prec):<10.4f} {np.mean(best_fold_rec):<10.4f} {np.mean(best_fold_f1):<10.4f} {np.mean(best_fold_auc):<10.4f} {sum(best_fold_tp):<8} {sum(best_fold_fp):<8} {sum(best_fold_fn):<8} {sum(best_fold_tn):<8}")
+
+print("\n上位5件:")
+trials_df = study.trials_dataframe().sort_values('value', ascending=False)
+for i, row in trials_df.head(5).iterrows():
+    print(f"  q_b={int(row['params_q_b'])}%, q_c={int(row['params_q_c'])}% → F1={row['value']:.4f}")
+
+# ============================================================
+# 交差検証による評価（XGBoost単体と3層構造の比較）
+# ============================================================
+print("\n" + "=" * 60)
+print("交差検証による評価（XGBoost単体 vs 3層構造）")
+print("=" * 60)
+
+cv_base_results, cv_layer3_results = evaluate_with_cv(best_q_b, best_q_c)
+
+print("\n【XGBoost単体 - 交差検証結果】")
+print(f"{'Fold':<6} {'Precision':<10} {'Recall':<10} {'F1':<10} {'AUC':<10} {'TP':<8} {'FP':<8} {'FN':<8} {'TN':<8}")
+print("-" * 86)
+for i in range(N_SPLITS):
+    print(f"Fold {i+1} {cv_base_results['precision'][i]:<10.4f} {cv_base_results['recall'][i]:<10.4f} {cv_base_results['f1'][i]:<10.4f} {cv_base_results['auc'][i]:<10.4f} {cv_base_results['tp'][i]:<8} {cv_base_results['fp'][i]:<8} {cv_base_results['fn'][i]:<8} {cv_base_results['tn'][i]:<8}")
+print("-" * 86)
+print(f"平均   {np.mean(cv_base_results['precision']):<10.4f} {np.mean(cv_base_results['recall']):<10.4f} {np.mean(cv_base_results['f1']):<10.4f} {np.mean(cv_base_results['auc']):<10.4f} {sum(cv_base_results['tp']):<8} {sum(cv_base_results['fp']):<8} {sum(cv_base_results['fn']):<8} {sum(cv_base_results['tn']):<8}")
+print(f"標準偏差 {np.std(cv_base_results['precision']):<10.4f} {np.std(cv_base_results['recall']):<10.4f} {np.std(cv_base_results['f1']):<10.4f} {np.std(cv_base_results['auc']):<10.4f}")
+
+print("\n【XGBoost + 3層構造 - 交差検証結果】")
+print(f"{'Fold':<6} {'Precision':<10} {'Recall':<10} {'F1':<10} {'AUC':<10} {'TP':<8} {'FP':<8} {'FN':<8} {'TN':<8}")
+print("-" * 86)
+for i in range(N_SPLITS):
+    print(f"Fold {i+1} {cv_layer3_results['precision'][i]:<10.4f} {cv_layer3_results['recall'][i]:<10.4f} {cv_layer3_results['f1'][i]:<10.4f} {cv_layer3_results['auc'][i]:<10.4f} {cv_layer3_results['tp'][i]:<8} {cv_layer3_results['fp'][i]:<8} {cv_layer3_results['fn'][i]:<8} {cv_layer3_results['tn'][i]:<8}")
+print("-" * 86)
+print(f"平均   {np.mean(cv_layer3_results['precision']):<10.4f} {np.mean(cv_layer3_results['recall']):<10.4f} {np.mean(cv_layer3_results['f1']):<10.4f} {np.mean(cv_layer3_results['auc']):<10.4f} {sum(cv_layer3_results['tp']):<8} {sum(cv_layer3_results['fp']):<8} {sum(cv_layer3_results['fn']):<8} {sum(cv_layer3_results['tn']):<8}")
+print(f"標準偏差 {np.std(cv_layer3_results['precision']):<10.4f} {np.std(cv_layer3_results['recall']):<10.4f} {np.std(cv_layer3_results['f1']):<10.4f} {np.std(cv_layer3_results['auc']):<10.4f}")
+
+print("\n【交差検証での差分（3層構造 - 単体）】")
+print(f"{'Fold':<6} {'Precision':<12} {'Recall':<12} {'F1':<12} {'AUC':<12}")
+print("-" * 56)
+for i in range(N_SPLITS):
+    diff_prec = cv_layer3_results['precision'][i] - cv_base_results['precision'][i]
+    diff_rec = cv_layer3_results['recall'][i] - cv_base_results['recall'][i]
+    diff_f1 = cv_layer3_results['f1'][i] - cv_base_results['f1'][i]
+    diff_auc = cv_layer3_results['auc'][i] - cv_base_results['auc'][i]
+    print(f"Fold {i+1} {diff_prec:+.4f}      {diff_rec:+.4f}      {diff_f1:+.4f}      {diff_auc:+.4f}")
+print("-" * 56)
+diff_prec_mean = np.mean(cv_layer3_results['precision']) - np.mean(cv_base_results['precision'])
+diff_rec_mean = np.mean(cv_layer3_results['recall']) - np.mean(cv_base_results['recall'])
+diff_f1_mean = np.mean(cv_layer3_results['f1']) - np.mean(cv_base_results['f1'])
+diff_auc_mean = np.mean(cv_layer3_results['auc']) - np.mean(cv_base_results['auc'])
+print(f"平均   {diff_prec_mean:+.4f}      {diff_rec_mean:+.4f}      {diff_f1_mean:+.4f}      {diff_auc_mean:+.4f}")
+
+# ============================================================
+# 最終評価（Train全体で学習 → Testで評価）
+# ============================================================
+print("\n" + "=" * 60)
+print("最終評価（Train全体 → Test）")
+print("=" * 60)
+
+# XGBoost単体
+print("\n[1] XGBoost単体...")
+model_base = xgb.XGBClassifier(
+    scale_pos_weight=scale_pos_weight,
+    random_state=RANDOM_STATE,
+    eval_metric='logloss',
+    n_jobs=-1,
+    verbosity=0,
+    max_depth=6,
+    n_estimators=100
+)
+model_base.fit(X_train, y_train)
+y_pred_base = model_base.predict(X_test)
+y_pred_proba_base = model_base.predict_proba(X_test)[:, 1]
+
+prec_base = precision_score(y_test, y_pred_base)
+rec_base = recall_score(y_test, y_pred_base)
+f1_base = f1_score(y_test, y_pred_base)
+auc_base = roc_auc_score(y_test, y_pred_proba_base)
+tn_base, fp_base, fn_base, tp_base = confusion_matrix(y_test, y_pred_base).ravel()
+
+print(f"  Precision: {prec_base:.4f}")
+print(f"  Recall:    {rec_base:.4f}")
+print(f"  F1 Score:  {f1_base:.4f}")
+print(f"  ROC-AUC:   {auc_base:.4f}")
+
+# 3層構造
+print("\n[2] XGBoost + 3層構造...")
+X_train_normal = X_train[y_train == 0]
+if len(X_train_normal) > 50000:
+    sample_idx = np.random.choice(len(X_train_normal), 50000, replace=False)
+    X_train_normal_sample = X_train_normal[sample_idx]
+else:
+    X_train_normal_sample = X_train_normal
+
+iso_forest = IsolationForest(contamination=0.1, random_state=RANDOM_STATE, n_jobs=-1)
+iso_forest.fit(X_train_normal_sample)
+
+train_scores = iso_forest.score_samples(X_train)
+test_scores = iso_forest.score_samples(X_test)
+normal_scores = iso_forest.score_samples(X_train_normal_sample)
+
+threshold_b = np.percentile(normal_scores, 100 - best_q_b)
+threshold_c = np.percentile(normal_scores, best_q_c)
+
+train_layers = assign_layer(train_scores, threshold_b, threshold_c)
+test_layers = assign_layer(test_scores, threshold_b, threshold_c)
+
+X_train_3layer = np.column_stack([X_train, train_scores, train_layers])
+X_test_3layer = np.column_stack([X_test, test_scores, test_layers])
+feature_names_3layer = feature_cols + ['layer_score', 'layer_label']
+
+model_3layer = xgb.XGBClassifier(
+    scale_pos_weight=scale_pos_weight,
+    random_state=RANDOM_STATE,
+    eval_metric='logloss',
+    n_jobs=-1,
+    verbosity=0,
+    max_depth=6,
+    n_estimators=100
+)
+model_3layer.fit(X_train_3layer, y_train)
+y_pred_3layer = model_3layer.predict(X_test_3layer)
+y_pred_proba_3layer = model_3layer.predict_proba(X_test_3layer)[:, 1]
+
+prec_3layer = precision_score(y_test, y_pred_3layer)
+rec_3layer = recall_score(y_test, y_pred_3layer)
+f1_3layer = f1_score(y_test, y_pred_3layer)
+auc_3layer = roc_auc_score(y_test, y_pred_proba_3layer)
+tn_3layer, fp_3layer, fn_3layer, tp_3layer = confusion_matrix(y_test, y_pred_3layer).ravel()
+
+print(f"  Precision: {prec_3layer:.4f}")
+print(f"  Recall:    {rec_3layer:.4f}")
+print(f"  F1 Score:  {f1_3layer:.4f}")
+print(f"  ROC-AUC:   {auc_3layer:.4f}")
+
+# 特徴量重要度
+importances = model_3layer.feature_importances_
+importance_df = pd.DataFrame({
+    'feature': feature_names_3layer,
+    'importance': importances
+}).sort_values('importance', ascending=False).reset_index(drop=True)
+
+layer_score_rank = importance_df[importance_df['feature'] == 'layer_score'].index[0] + 1
+layer_score_importance = importance_df[importance_df['feature'] == 'layer_score']['importance'].values[0]
+layer_label_rank = importance_df[importance_df['feature'] == 'layer_label'].index[0] + 1
+layer_label_importance = importance_df[importance_df['feature'] == 'layer_label']['importance'].values[0]
+
+# 異常の層別分布
+attack_mask = y_test == 1
+attack_layers = test_layers[attack_mask]
+attack_in_A = sum(attack_layers == 0)
+attack_in_B = sum(attack_layers == 1)
+attack_in_C = sum(attack_layers == 2)
+total_attack = len(attack_layers)
+
+# ============================================================
+# 結果表示
+# ============================================================
+print("\n" + "=" * 60)
+print("結果サマリー")
+print("=" * 60)
+
+print("\n【XGBoost 単体】")
+print(f"  混同行列: TP={tp_base}, FP={fp_base}, FN={fn_base}, TN={tn_base}")
+print(f"  Precision: {prec_base:.4f}")
+print(f"  Recall:    {rec_base:.4f}")
+print(f"  F1 Score:  {f1_base:.4f}")
+print(f"  ROC-AUC:   {auc_base:.4f}")
+
+print("\n【XGBoost + 3層構造】")
+print(f"  混同行列: TP={tp_3layer}, FP={fp_3layer}, FN={fn_3layer}, TN={tn_3layer}")
+print(f"  Precision: {prec_3layer:.4f}")
+print(f"  Recall:    {rec_3layer:.4f}")
+print(f"  F1 Score:  {f1_3layer:.4f}")
+print(f"  ROC-AUC:   {auc_3layer:.4f}")
+
+print("\n【差分（3層構造 - 単体）】")
+print(f"  Precision: {prec_3layer - prec_base:+.4f}")
+print(f"  Recall:    {rec_3layer - rec_base:+.4f}")
+print(f"  F1 Score:  {f1_3layer - f1_base:+.4f}")
+print(f"  ROC-AUC:   {auc_3layer - auc_base:+.4f}")
+print(f"  TP: {tp_3layer - tp_base:+d}, FP: {fp_3layer - fp_base:+d}, FN: {fn_3layer - fn_base:+d}")
+
+print("\n【特徴量重要度】")
+print(f"  layer_score: {layer_score_rank}位 (重要度: {layer_score_importance:.4f})")
+print(f"  layer_label: {layer_label_rank}位 (重要度: {layer_label_importance:.4f})")
+
+print("\n【異常の層別分布（Test）】")
+print(f"  A層: {attack_in_A:,} ({attack_in_A/total_attack*100:.1f}%)")
+print(f"  B層: {attack_in_B:,} ({attack_in_B/total_attack*100:.1f}%)")
+print(f"  C層: {attack_in_C:,} ({attack_in_C/total_attack*100:.1f}%)")
+
+print("\n【特徴量重要度 Top10】")
+for i, row in importance_df.head(10).iterrows():
+    print(f"  {i+1:2d}位: {row['feature']:25s} ({row['importance']:.4f})")
+
+# ============================================================
+# テキストファイル保存
+# ============================================================
+TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
+OUTPUT_FILE = f'{BASE_DIR}/nslkdd_3layer_optuna_correct_{TIMESTAMP}.txt'
+
+output_text = f"""============================================================
+XGBoost + 3層構造 NSL-KDD 結果（修正版）
+実行日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+最適化手法: Optuna (TPE, {N_TRIALS} trials)
+評価方法: Train内{N_SPLITS}分割CVで最適化 → Testで最終評価
+============================================================
+
+=== データ概要 ===
+Train: {len(train_df):,}件
+  正常: {(train_df['is_attack']==0).sum():,}, 攻撃: {(train_df['is_attack']==1).sum():,}
+  攻撃率: {train_df['is_attack'].mean()*100:.1f}%
+Test: {len(test_df):,}件（未知の攻撃を含む）
+  正常: {(test_df['is_attack']==0).sum():,}, 攻撃: {(test_df['is_attack']==1).sum():,}
+  攻撃率: {test_df['is_attack'].mean()*100:.1f}%
+scale_pos_weight: {scale_pos_weight:.2f}
+
+=== Optuna最適化結果（Train内CV）===
+最適な分位点: q_b={best_q_b}%, q_c={best_q_c}%
+CV最良F1スコア: {best_cv_f1:.4f} (std: {best_f1_std:.4f})
+
+各foldの詳細:
+Fold   Precision  Recall     F1         AUC        TP       FP       FN       TN
+--------------------------------------------------------------------------------------
+Fold 1 {best_fold_prec[0]:<10.4f} {best_fold_rec[0]:<10.4f} {best_fold_f1[0]:<10.4f} {best_fold_auc[0]:<10.4f} {best_fold_tp[0]:<8} {best_fold_fp[0]:<8} {best_fold_fn[0]:<8} {best_fold_tn[0]:<8}
+Fold 2 {best_fold_prec[1]:<10.4f} {best_fold_rec[1]:<10.4f} {best_fold_f1[1]:<10.4f} {best_fold_auc[1]:<10.4f} {best_fold_tp[1]:<8} {best_fold_fp[1]:<8} {best_fold_fn[1]:<8} {best_fold_tn[1]:<8}
+Fold 3 {best_fold_prec[2]:<10.4f} {best_fold_rec[2]:<10.4f} {best_fold_f1[2]:<10.4f} {best_fold_auc[2]:<10.4f} {best_fold_tp[2]:<8} {best_fold_fp[2]:<8} {best_fold_fn[2]:<8} {best_fold_tn[2]:<8}
+Fold 4 {best_fold_prec[3]:<10.4f} {best_fold_rec[3]:<10.4f} {best_fold_f1[3]:<10.4f} {best_fold_auc[3]:<10.4f} {best_fold_tp[3]:<8} {best_fold_fp[3]:<8} {best_fold_fn[3]:<8} {best_fold_tn[3]:<8}
+Fold 5 {best_fold_prec[4]:<10.4f} {best_fold_rec[4]:<10.4f} {best_fold_f1[4]:<10.4f} {best_fold_auc[4]:<10.4f} {best_fold_tp[4]:<8} {best_fold_fp[4]:<8} {best_fold_fn[4]:<8} {best_fold_tn[4]:<8}
+--------------------------------------------------------------------------------------
+平均   {np.mean(best_fold_prec):<10.4f} {np.mean(best_fold_rec):<10.4f} {np.mean(best_fold_f1):<10.4f} {np.mean(best_fold_auc):<10.4f} {sum(best_fold_tp):<8} {sum(best_fold_fp):<8} {sum(best_fold_fn):<8} {sum(best_fold_tn):<8}
+
+上位5件:
+"""
+
+for i, row in trials_df.head(5).iterrows():
+    output_text += f"  q_b={int(row['params_q_b'])}%, q_c={int(row['params_q_c'])}% → F1={row['value']:.4f}\n"
+
+output_text += f"""
+============================================================
+交差検証による評価（XGBoost単体 vs 3層構造）
+============================================================
+
+【XGBoost単体 - 交差検証結果】
+Fold   Precision  Recall     F1         AUC        TP       FP       FN       TN
+--------------------------------------------------------------------------------------
+Fold 1 {cv_base_results['precision'][0]:<10.4f} {cv_base_results['recall'][0]:<10.4f} {cv_base_results['f1'][0]:<10.4f} {cv_base_results['auc'][0]:<10.4f} {cv_base_results['tp'][0]:<8} {cv_base_results['fp'][0]:<8} {cv_base_results['fn'][0]:<8} {cv_base_results['tn'][0]:<8}
+Fold 2 {cv_base_results['precision'][1]:<10.4f} {cv_base_results['recall'][1]:<10.4f} {cv_base_results['f1'][1]:<10.4f} {cv_base_results['auc'][1]:<10.4f} {cv_base_results['tp'][1]:<8} {cv_base_results['fp'][1]:<8} {cv_base_results['fn'][1]:<8} {cv_base_results['tn'][1]:<8}
+Fold 3 {cv_base_results['precision'][2]:<10.4f} {cv_base_results['recall'][2]:<10.4f} {cv_base_results['f1'][2]:<10.4f} {cv_base_results['auc'][2]:<10.4f} {cv_base_results['tp'][2]:<8} {cv_base_results['fp'][2]:<8} {cv_base_results['fn'][2]:<8} {cv_base_results['tn'][2]:<8}
+Fold 4 {cv_base_results['precision'][3]:<10.4f} {cv_base_results['recall'][3]:<10.4f} {cv_base_results['f1'][3]:<10.4f} {cv_base_results['auc'][3]:<10.4f} {cv_base_results['tp'][3]:<8} {cv_base_results['fp'][3]:<8} {cv_base_results['fn'][3]:<8} {cv_base_results['tn'][3]:<8}
+Fold 5 {cv_base_results['precision'][4]:<10.4f} {cv_base_results['recall'][4]:<10.4f} {cv_base_results['f1'][4]:<10.4f} {cv_base_results['auc'][4]:<10.4f} {cv_base_results['tp'][4]:<8} {cv_base_results['fp'][4]:<8} {cv_base_results['fn'][4]:<8} {cv_base_results['tn'][4]:<8}
+--------------------------------------------------------------------------------------
+平均   {np.mean(cv_base_results['precision']):<10.4f} {np.mean(cv_base_results['recall']):<10.4f} {np.mean(cv_base_results['f1']):<10.4f} {np.mean(cv_base_results['auc']):<10.4f} {sum(cv_base_results['tp']):<8} {sum(cv_base_results['fp']):<8} {sum(cv_base_results['fn']):<8} {sum(cv_base_results['tn']):<8}
+標準偏差 {np.std(cv_base_results['precision']):<10.4f} {np.std(cv_base_results['recall']):<10.4f} {np.std(cv_base_results['f1']):<10.4f} {np.std(cv_base_results['auc']):<10.4f}
+
+【XGBoost + 3層構造 - 交差検証結果】
+Fold   Precision  Recall     F1         AUC        TP       FP       FN       TN
+--------------------------------------------------------------------------------------
+Fold 1 {cv_layer3_results['precision'][0]:<10.4f} {cv_layer3_results['recall'][0]:<10.4f} {cv_layer3_results['f1'][0]:<10.4f} {cv_layer3_results['auc'][0]:<10.4f} {cv_layer3_results['tp'][0]:<8} {cv_layer3_results['fp'][0]:<8} {cv_layer3_results['fn'][0]:<8} {cv_layer3_results['tn'][0]:<8}
+Fold 2 {cv_layer3_results['precision'][1]:<10.4f} {cv_layer3_results['recall'][1]:<10.4f} {cv_layer3_results['f1'][1]:<10.4f} {cv_layer3_results['auc'][1]:<10.4f} {cv_layer3_results['tp'][1]:<8} {cv_layer3_results['fp'][1]:<8} {cv_layer3_results['fn'][1]:<8} {cv_layer3_results['tn'][1]:<8}
+Fold 3 {cv_layer3_results['precision'][2]:<10.4f} {cv_layer3_results['recall'][2]:<10.4f} {cv_layer3_results['f1'][2]:<10.4f} {cv_layer3_results['auc'][2]:<10.4f} {cv_layer3_results['tp'][2]:<8} {cv_layer3_results['fp'][2]:<8} {cv_layer3_results['fn'][2]:<8} {cv_layer3_results['tn'][2]:<8}
+Fold 4 {cv_layer3_results['precision'][3]:<10.4f} {cv_layer3_results['recall'][3]:<10.4f} {cv_layer3_results['f1'][3]:<10.4f} {cv_layer3_results['auc'][3]:<10.4f} {cv_layer3_results['tp'][3]:<8} {cv_layer3_results['fp'][3]:<8} {cv_layer3_results['fn'][3]:<8} {cv_layer3_results['tn'][3]:<8}
+Fold 5 {cv_layer3_results['precision'][4]:<10.4f} {cv_layer3_results['recall'][4]:<10.4f} {cv_layer3_results['f1'][4]:<10.4f} {cv_layer3_results['auc'][4]:<10.4f} {cv_layer3_results['tp'][4]:<8} {cv_layer3_results['fp'][4]:<8} {cv_layer3_results['fn'][4]:<8} {cv_layer3_results['tn'][4]:<8}
+--------------------------------------------------------------------------------------
+平均   {np.mean(cv_layer3_results['precision']):<10.4f} {np.mean(cv_layer3_results['recall']):<10.4f} {np.mean(cv_layer3_results['f1']):<10.4f} {np.mean(cv_layer3_results['auc']):<10.4f} {sum(cv_layer3_results['tp']):<8} {sum(cv_layer3_results['fp']):<8} {sum(cv_layer3_results['fn']):<8} {sum(cv_layer3_results['tn']):<8}
+標準偏差 {np.std(cv_layer3_results['precision']):<10.4f} {np.std(cv_layer3_results['recall']):<10.4f} {np.std(cv_layer3_results['f1']):<10.4f} {np.std(cv_layer3_results['auc']):<10.4f}
+
+【交差検証での差分（3層構造 - 単体）】
+Fold   Precision    Recall       F1           AUC
+--------------------------------------------------------
+Fold 1 {cv_layer3_results['precision'][0] - cv_base_results['precision'][0]:+.4f}       {cv_layer3_results['recall'][0] - cv_base_results['recall'][0]:+.4f}       {cv_layer3_results['f1'][0] - cv_base_results['f1'][0]:+.4f}       {cv_layer3_results['auc'][0] - cv_base_results['auc'][0]:+.4f}
+Fold 2 {cv_layer3_results['precision'][1] - cv_base_results['precision'][1]:+.4f}       {cv_layer3_results['recall'][1] - cv_base_results['recall'][1]:+.4f}       {cv_layer3_results['f1'][1] - cv_base_results['f1'][1]:+.4f}       {cv_layer3_results['auc'][1] - cv_base_results['auc'][1]:+.4f}
+Fold 3 {cv_layer3_results['precision'][2] - cv_base_results['precision'][2]:+.4f}       {cv_layer3_results['recall'][2] - cv_base_results['recall'][2]:+.4f}       {cv_layer3_results['f1'][2] - cv_base_results['f1'][2]:+.4f}       {cv_layer3_results['auc'][2] - cv_base_results['auc'][2]:+.4f}
+Fold 4 {cv_layer3_results['precision'][3] - cv_base_results['precision'][3]:+.4f}       {cv_layer3_results['recall'][3] - cv_base_results['recall'][3]:+.4f}       {cv_layer3_results['f1'][3] - cv_base_results['f1'][3]:+.4f}       {cv_layer3_results['auc'][3] - cv_base_results['auc'][3]:+.4f}
+Fold 5 {cv_layer3_results['precision'][4] - cv_base_results['precision'][4]:+.4f}       {cv_layer3_results['recall'][4] - cv_base_results['recall'][4]:+.4f}       {cv_layer3_results['f1'][4] - cv_base_results['f1'][4]:+.4f}       {cv_layer3_results['auc'][4] - cv_base_results['auc'][4]:+.4f}
+--------------------------------------------------------
+平均   {diff_prec_mean:+.4f}       {diff_rec_mean:+.4f}       {diff_f1_mean:+.4f}       {diff_auc_mean:+.4f}
+
+============================================================
+最終評価（Test: 未知の攻撃への汎化性能）
+============================================================
+
+【XGBoost 単体】
+混同行列:
+  TP: {tp_base}, FP: {fp_base}, FN: {fn_base}, TN: {tn_base}
+評価指標:
+  Precision: {prec_base:.4f}
+  Recall:    {rec_base:.4f}
+  F1 Score:  {f1_base:.4f}
+  ROC-AUC:   {auc_base:.4f}
+
+【XGBoost + 3層構造】
+混同行列:
+  TP: {tp_3layer}, FP: {fp_3layer}, FN: {fn_3layer}, TN: {tn_3layer}
+評価指標:
+  Precision: {prec_3layer:.4f}
+  Recall:    {rec_3layer:.4f}
+  F1 Score:  {f1_3layer:.4f}
+  ROC-AUC:   {auc_3layer:.4f}
+
+============================================================
+性能比較（3層構造 - 単体）
+============================================================
+  Precision: {prec_3layer - prec_base:+.4f}
+  Recall:    {rec_3layer - rec_base:+.4f}
+  F1 Score:  {f1_3layer - f1_base:+.4f}
+  ROC-AUC:   {auc_3layer - auc_base:+.4f}
+  TP: {tp_3layer - tp_base:+d}
+  FP: {fp_3layer - fp_base:+d}
+  FN: {fn_3layer - fn_base:+d}
+
+============================================================
+追加特徴量の重要度ランキング
+============================================================
+layer_score: {layer_score_rank:2d}位 (重要度: {layer_score_importance:.4f})
+layer_label: {layer_label_rank:2d}位 (重要度: {layer_label_importance:.4f})
+
+=== 特徴量重要度 Top10 ===
+"""
+
+for i, row in importance_df.head(10).iterrows():
+    output_text += f"  {i+1:2d}位: {row['feature']:25s} ({row['importance']:.4f})\n"
+
+output_text += f"""
+============================================================
+異常サンプルの層別分布（Test）
+============================================================
+  A層（Core Normal）:   {attack_in_A:,} ({attack_in_A/total_attack*100:.1f}%)
+  B層（Fluctuation）:   {attack_in_B:,} ({attack_in_B/total_attack*100:.1f}%)
+  C層（Anomaly-prone）: {attack_in_C:,} ({attack_in_C/total_attack*100:.1f}%)
+
+============================================================
+結論
+============================================================
+"""
+
+if f1_3layer - f1_base > 0.005:
+    output_text += f"3層構造の効果: 有効（F1が{f1_3layer - f1_base:+.4f}改善）\n"
+elif f1_3layer - f1_base < -0.005:
+    output_text += f"3層構造の効果: 逆効果（F1が{f1_3layer - f1_base:+.4f}悪化）\n"
+else:
+    output_text += f"3層構造の効果: 微小（F1差分={f1_3layer - f1_base:+.4f}）\n"
+
+output_text += f"""
+考察:
+  - NSL-KDDのTestは未知の攻撃タイプを含む
+  - Train内CVでのF1={best_cv_f1:.4f} vs Test F1={f1_3layer:.4f}
+  - 異常の{attack_in_C/total_attack*100:.1f}%がC層に分布
+"""
+
+with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+    f.write(output_text)
+
+print(f"\n結果を保存しました: {OUTPUT_FILE}")
+print("完了！")
